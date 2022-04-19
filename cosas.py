@@ -152,7 +152,7 @@ class Pose:
         self.frames.append(get_pose(path))
 
     def read_video(self, start, end):
-        system(f"ffmpeg -loglevel quiet -i input.mp4 -ss {start} -t {end-start} -r 12 output-%01d.bmp")
+        system(f"ffmpeg -loglevel quiet -i inputs/input.mp4 -ss {start} -t {end-start} -r 12 output-%01d.bmp")
         for i in range(1, (end - start) * 12):
             self.add_frame(f'output-{i}.bmp')
             system(f'rm output-{i}.bmp')
