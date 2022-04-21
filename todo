@@ -1,3 +1,8 @@
+[] Add readme
+     [] Examples
+
+[] Document each function properly
+
 => Make module structure more sensible
    - poses should be independent of where you get frames from
         [X] Pose.read_from_mp4()
@@ -23,3 +28,5 @@
 
 => Validate input paths properly to avoid code injections
     [] Is pathlib.Path.is_file() enough?
+
+[] Docker image
