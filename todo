@@ -1,14 +1,16 @@
 => Make module structure more sensible
    - poses should be independent of where you get frames from
+        [X] Pose.read_from_mp4()
+        [] Pose.poses_from_list()
    - rendering should be on two separate modules (one for 2d with pyglet, the other for 3d with ursina)
    - there should be a utils module for getting frames from video with ffmpeg
    - bpy interface module
 
 [] Ursina rendering with [17, 3] tensors (just for testing with mock vectors)
 [] BPY model manipulaton (again, with mock data)
-[] ffmpeg util
-[] Decent pose class
-[] Decent tflite interface util
+[X] ffmpeg util
+[/] Decent pose class
+[X] Decent tflite interface util
 
 [] Make some default skelletons
 
@@ -19,3 +21,5 @@
        [] CLI
        [] GUI
 
+=> Validate input paths properly to avoid code injections
+    [] Is pathlib.Path.is_file() enough?
