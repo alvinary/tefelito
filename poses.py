@@ -2,6 +2,8 @@ from math import sqrt
 import pyglet
 import ffmpeg_loader
 
+window = pyglet.window.Window(700, 700)
+
 bones_batch = pyglet.graphics.Batch()
 
 # Pairs of body part names and indices
@@ -87,7 +89,7 @@ part_indices = dict(part_indices)
 
 # Map keypoint indices to body part names
 index_parts = {}
-for k, v in part_indices:
+for k, v in part_indices.items():
     index_parts[v] = k
 
 sorted_pair_parts = []
@@ -167,9 +169,10 @@ class Pose:
     def to3D(self):
         self.frames_3d = []
         for f in self.frames:
-            self.frames_3d.append(solve_z(f))
+            extended_pose = self.get_3d_pose(f)
+            self.frames_3d.append(extended_pose)
 
-    def solve_z(self, pose):
+    def get_3d_pose(self, pose_2d):
         
         # Set up a frame with dummy values
         tridimensional_pose = [0 for i in range(17)]
@@ -182,8 +185,8 @@ class Pose:
         # (3d frame have 17 3-tuples, one for each keypoint)
 
         for p1, p2 in sorted_part_pairs:
-            v1 = pose[part_indices[p1]]
-            v2 = pose[part_indices[p2]]
+            v1 = pose_2d[part_indices[p1]]
+            v2 = pose_2d[part_indices[p2]]
             x1, y1 = v1
             x2, y2 = v2
             z1 = keypoint_z[p1]
@@ -204,10 +207,8 @@ class Pose:
     def smooth_3d_frames(self):
         pass
 
-window = pyglet.window.Window(700, 700)
-
 video_pose = Pose()
-video_pose.frames_from_mp4("input/input.mp4", 0, 120)
+video_pose.frames_from_mp4("./inputs/input.mp4", 0, 120)
 
 @window.event()
 def on_draw():

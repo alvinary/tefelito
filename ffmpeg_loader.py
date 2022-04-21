@@ -1,6 +1,6 @@
 from os import system
 from time import sleep
-from pathlib import is_file
+from pathlib import Path
 import movenet
 from math import sqrt
 
@@ -15,14 +15,17 @@ def normalize(float_coordinate):
 
 def get_pose(path):
     coordinates = movenet.read_frame(path)
-    coordinates = [(normalize(x), normalize(y)) for x, y in coordinates]
+    print(coordinates)
+    coordinates = [(normalize(x), normalize(y)) for x, y, p in coordinates]
     return coordinates
 
 def read_video(input_path, start, end, rest=0.0):
 
     frame_poses = []
 
-    if is_file(input_path):
+    path = Path(input_path)
+
+    if path.is_file():
         system(f"ffmpeg -loglevel quiet -i {input_path} -ss {start} -t {end-start} -r {FRAMERATE} {TEMPORARY_BMP_PREFIX}-%01d.bmp")
         for i in range(1, (end - start) * 12):
             current_pose = get_pose(f'{TEMPORARY_BMP_PREFIX}-{i}.bmp')
@@ -31,7 +34,7 @@ def read_video(input_path, start, end, rest=0.0):
             if rest != 0:
                 sleep(rest)
     
-    elif not is_file(input_path):
+    elif not path.is_file():
         log_path_error()
 
     return frame_poses
