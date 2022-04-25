@@ -1,10 +1,6 @@
 from math import sqrt
-import pyglet
+import ursina
 import ffmpeg_loader
-
-window = pyglet.window.Window(700, 700)
-
-bones_batch = pyglet.graphics.Batch()
 
 # Pairs of body part names and indices
 parts = '''
@@ -114,13 +110,35 @@ def solve_z(v1, v2, d):
     # How about returning just abs?
     return (z2, -z2)
 
+def dot(v, w):
+    return sum([v_i * w_i for (v_i, w_i) in zip(v, w)])
+
+def ortho(vec, length):
+    '''Return a vector orthogonal to v1 with norm 'length' '''
+    first_component = vec.pop()
+    tail_sum = -sum([v_i for v_i in vec])
+    _ortho = [tail_sum] + [first_component for v_i in vec]
+    scalar = length / dot(_ortho, _ortho)
+    _ortho = tuple([scalar * v_i for v_i in vec])
+    return tuple(_ortho)
+
 class Bone:
     def __init__(self):
-        self.line = pyglet.shapes.Line(0, 0, 0, 0, color=(255,255,255), width=1, batch=bones_batch)
+        verts = [(0, 0, 0), (0, 0, 1),
+                 (0, 0, 1), (1, 0, 0),
+                 (0, 1, 1), (1, 0, 1),
+                 (1, 1, 0), (1, 1, 1)]
+        tris = [(0, 1, 2), (0, 3, 2), (0, 1, 4), (1, 4, 2)]
+        self.body = ursina.Entity(model=ursina.Mesh(vertices=verts, triangles=tris,
+                           mode='line', thickness=4),
+                           color=ursina.color.cyan, z=-1)
 
-    def update_position(self, _x, _y, _x2, _y2):
-        self.line.x, self.line.y, self.line.x2, self.line.y2 = _x, 700 - _y, _x2, 700 - _y2
-        
+    def update_position(self, _x, _y, _z, _x2, _y2, _z2):
+        verts = []
+        tris = []
+        self.body = ursina.Entity(model=ursina.Mesh(vertices=verts, triangles=tris,
+                           mode='line', thickness=4),
+                           color=ursina.color.cyan, z=-1)
 
 class Pose:
     def __init__(self):
@@ -207,16 +225,6 @@ class Pose:
     def smooth_3d_frames(self):
         pass
 
-video_pose = Pose()
-video_pose.frames_from_mp4("./inputs/input.mp4", 0, 120)
-
-@window.event()
-def on_draw():
-    window.clear()
-    bones_batch.draw()
-
-window.push_handlers(video_pose)
-
-pyglet.clock.schedule_interval(video_pose.update, 1/12)
-
-pyglet.app.run()
+if __name__ == '__main__':
+    video_pose = Pose()
+    video_pose.frames_from_mp4("./inputs/input.mp4", 0, 120)
