@@ -2,6 +2,8 @@ from math import sqrt
 import ursina
 import ffmpeg_loader
 
+BONE_THICKNESS = 4
+
 # Pairs of body part names and indices
 parts = '''
 nose : 0
@@ -113,14 +115,21 @@ def solve_z(v1, v2, d):
 def dot(v, w):
     return sum([v_i * w_i for (v_i, w_i) in zip(v, w)])
 
+def _sum(v,w):
+    return tuple([v[i] + w[i] for i, _ in enumerate(zip(v, w))])
+
 def ortho(vec, length):
     '''Return a vector orthogonal to v1 with norm 'length' '''
     first_component = vec.pop()
     tail_sum = -sum([v_i for v_i in vec])
     _ortho = [tail_sum] + [first_component for v_i in vec]
-    scalar = length / dot(_ortho, _ortho)
-    _ortho = tuple([scalar * v_i for v_i in vec])
+    scalar = (length / dot(_ortho, _ortho)) ** 1/2
+    _ortho = [scalar * v_i for v_i in vec]
     return tuple(_ortho)
+
+def ortho_other(vec, length):
+    a, b = vec[0], vec[1]
+    return (-b*(1/(a*b)+1), a, 1/b)
 
 class Bone:
     def __init__(self):
@@ -133,9 +142,19 @@ class Bone:
                            mode='line', thickness=4),
                            color=ursina.color.cyan, z=-1)
 
-    def update_position(self, _x, _y, _z, _x2, _y2, _z2):
-        verts = []
-        tris = []
+    def update_position(self, x1, y1, z1, x2, y2, z2):
+        tip = (x2 - x1, y2 - y1, z2 - z1)
+        _ortho1 = ortho(tip, BONE_THICKNESS)
+        _ortho2 = ortho_other(_ortho1, BONE_THICKNESS)
+        low_tip = (x1, y1, z1)
+        high_tip = (x2, y2, z2)
+        side_tip = _sum(low_tip, _ortho1)
+        interior_tip = _sum(low_tip, _ortho2)
+        verts = [low_tip, high_tip, side_tip, inferior_tip]
+        tris = [(low_tip, side_tip, interior_tip),
+                (low_tip, side_tip, high_tip),
+                (low_tip, interior_tip, high_tip),
+                (interior_tip, side_tip, high_tip)]
         self.body = ursina.Entity(model=ursina.Mesh(vertices=verts, triangles=tris,
                            mode='line', thickness=4),
                            color=ursina.color.cyan, z=-1)
