@@ -107,10 +107,10 @@ part_pair_distances = []
 def solve_z(v1, v2, d):
     x1, y1, z1 = v1
     x2, y2 = v2
+    print("Z1 IS...", z1)
     z_diff = sqrt(d ** 2 - (x1 - x2) ** 2 - (y1 - y2) ** 2)
     z2 = z_diff - z1
-    # How about returning just abs?
-    return (z2, -z2)
+    return z2
 
 def dot(v, w):
     return sum([v_i * w_i for (v_i, w_i) in zip(v, w)])
