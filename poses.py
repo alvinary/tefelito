@@ -125,10 +125,8 @@ def ortho(vec, length):
 class Bone:
     def __init__(self):
         verts = [(0, 0, 0), (0, 0, 1),
-                 (0, 0, 1), (1, 0, 0),
-                 (0, 1, 1), (1, 0, 1),
-                 (1, 1, 0), (1, 1, 1)]
-        tris = [(0, 1, 2), (0, 3, 2), (0, 1, 4), (1, 4, 2)]
+                 (0, 0, 1), (1, 0, 0)]
+        tris = [(0, 1, 2), (0, 3, 2), (0, 1, 3), (3, 1, 0)]
         self.body = ursina.Entity(model=ursina.Mesh(vertices=verts, triangles=tris,
                            mode='line', thickness=4),
                            color=ursina.color.cyan, z=-1)
