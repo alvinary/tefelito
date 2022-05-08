@@ -11,7 +11,7 @@ def log_path_error(path_name=""):
     print("The requested path is not a valid path name!")
 
 def normalize(float_coordinate):
-    return int(float_coordinate*500)
+    return int(float_coordinate*2000)
 
 def get_pose(path):
     coordinates = movenet.read_frame(path)
