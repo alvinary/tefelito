@@ -138,9 +138,9 @@ class Bone(ursina.Entity):
                  (0, 1, 1), (1, 0, 1),
                  (1, 1, 0), (1, 1, 1)]
         tris = [(0, 1, 2), (0, 3, 2), (0, 1, 4), (1, 4, 2)]
-        super.__init__(model=ursina.Mesh(vertices=verts, triangles=tris,
-                       mode='line', thickness=4),
-                       color=ursina.color.cyan, z=-1, **kwargs)
+        super().__init__(model=ursina.Mesh(vertices=verts, triangles=tris,
+                        mode='line', thickness=4),
+                        color=ursina.color.cyan, z=-1, **kwargs)
         self.pose = parentPose
         self.highTip = highIndex
         self.lowTip = lowIndex
@@ -250,5 +250,6 @@ class Pose:
 
 if __name__ == '__main__':
     video_pose = Pose()
-    video_pose.frames_from_mp4("./inputs/input.mp4", 0, 120)
+    video_pose.frames_from_mp4("./inputs/input.mp4", 0, 12)
     video_pose.to3D()
+    ursina.app.run()
