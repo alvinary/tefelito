@@ -131,16 +131,19 @@ def ortho_other(vec, length):
     a, b = vec[0], vec[1]
     return (-b*(1/(a*b)+1), a, 1/b)
 
-class Bone:
-    def __init__(self):
+class Bone(ursina.Entity):
+    def __init__(self, parentPose, highIndex, lowIndex, **kwargs):
         verts = [(0, 0, 0), (0, 0, 1),
                  (0, 0, 1), (1, 0, 0),
                  (0, 1, 1), (1, 0, 1),
                  (1, 1, 0), (1, 1, 1)]
         tris = [(0, 1, 2), (0, 3, 2), (0, 1, 4), (1, 4, 2)]
-        self.body = ursina.Entity(model=ursina.Mesh(vertices=verts, triangles=tris,
-                           mode='line', thickness=4),
-                           color=ursina.color.cyan, z=-1)
+        super.__init__(model=ursina.Mesh(vertices=verts, triangles=tris,
+                       mode='line', thickness=4),
+                       color=ursina.color.cyan, z=-1, **kwargs)
+        self.pose = parentPose
+        self.highTip = highIndex
+        self.lowTip = lowIndex
 
     def update_position(self, x1, y1, z1, x2, y2, z2):
         tip = (x2 - x1, y2 - y1, z2 - z1)
@@ -150,14 +153,29 @@ class Bone:
         high_tip = (x2, y2, z2)
         side_tip = _sum(low_tip, _ortho1)
         interior_tip = _sum(low_tip, _ortho2)
-        verts = [low_tip, high_tip, side_tip, inferior_tip]
+        verts = [low_tip, high_tip, side_tip, interior_tip]
         tris = [(low_tip, side_tip, interior_tip),
                 (low_tip, side_tip, high_tip),
                 (low_tip, interior_tip, high_tip),
                 (interior_tip, side_tip, high_tip)]
-        self.body = ursina.Entity(model=ursina.Mesh(vertices=verts, triangles=tris,
-                           mode='line', thickness=4),
-                           color=ursina.color.cyan, z=-1)
+        self.model = ursina.Mesh(vertices=verts, triangles=tris,
+                                 mode='line', thickness=4)
+        self.color = ursina.color.cyan
+        self.z=-1
+
+    def update(self):
+        self.counter += ursina.time.dt
+        headBone = self.lowTip == 5 and self.highTip == 6
+        if headBone:
+            self.pose.currentIndex += 1
+            poseSize = len(self.pose.frames_3d)
+            self.pose.currentIndex %= poseSize
+        if self.counter >= 0.05:
+            self.counter = 0
+            frameIndex = self.pose.current_frame
+            x1, y1, z1 = self.pose.frames_3d[frameIndex][self.lowTip]
+            x2, y2, z2 = self.pose.frames_3d[frameIndex][self.highTip]
+            self.update_position(x1, y1, z1, x2, y2, z2)
 
 class Pose:
     def __init__(self):
@@ -168,7 +186,7 @@ class Pose:
                          (13, 15), (5, 11), (6, 12),
                          (3, 4), (3, 5), (4, 6)]
 
-        self.bones = [Bone() for i in self.bar_axes]
+        self.bones = [Bone(self, i, j) for (i, j) in self.bar_axes]
         
         self.frames = []
         self.frames_3d = []
@@ -180,17 +198,6 @@ class Pose:
         self.shoulder_scale = 1
         self.long_scale = 1
 
-    def update_bones(self, coordinates):
-        
-        for i, pair in enumerate(self.bar_axes):
-        
-            end, end2 = pair
-            
-            x1, y1 = coordinates[end][1], coordinates[end][0]
-            x2, y2 = coordinates[end2][1], coordinates[end2][0]
-            
-            self.bones[i].update_position(x1, y1, x2, y2)
-            
     def frames_from_mp4(self, path, start, end):
         self.frames = ffmpeg_loader.read_video(path, start, end)
         self.frames = list(self.frames)
@@ -198,10 +205,6 @@ class Pose:
     def on_key_press(self, symbol, modifiers):
         self.current_frame += 1
         self.update_bones(self.frames[self.current_frame])
-
-    def update(self, dt):
-        self.current_frame += 1
-        self.update_bones(self.frames[(self.current_frame + 1) % len(self.frames)])
 
     def to3D(self):
         self.frames_3d = []
@@ -243,6 +246,7 @@ class Pose:
 
     def smooth_3d_frames(self):
         pass
+
 
 if __name__ == '__main__':
     video_pose = Pose()
