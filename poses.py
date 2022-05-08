@@ -247,3 +247,4 @@ class Pose:
 if __name__ == '__main__':
     video_pose = Pose()
     video_pose.frames_from_mp4("./inputs/input.mp4", 0, 120)
+    video_pose.to3D()
