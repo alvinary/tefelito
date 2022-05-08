@@ -35,7 +35,7 @@ right shoulder : right hip : 42
 right hip : right knee : 42
 right knee : right ankle : 42
 left shoulder : left elbow : 31
-left elbow : left writs : 28
+left elbow : left wrist : 28
 left shoulder : left hip : 42
 left hip : left knee : 42
 left knee : left ankle : 42
