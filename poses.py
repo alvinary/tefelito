@@ -27,18 +27,18 @@ right ankle : 16
 
 # Reference distances between body parts
 distances = '''
-left hip : right hip : 36
-left shoulder : right shoulder : 42
-right shoulder : right elbow : 31
-right elbow : right wrist : 28
-right shoulder : right hip : 42
-right hip : right knee : 42
-right knee : right ankle : 42
-left shoulder : left elbow : 31
-left elbow : left wrist : 28
-left shoulder : left hip : 42
-left hip : left knee : 42
-left knee : left ankle : 42
+left hip : right hip : 360
+left shoulder : right shoulder : 840
+right shoulder : right elbow : 620
+right elbow : right wrist : 560
+right shoulder : right hip : 840
+right hip : right knee : 840
+right knee : right ankle : 840
+left shoulder : left elbow : 620
+left elbow : left wrist : 560
+left shoulder : left hip : 840
+left hip : left knee : 840
+left knee : left ankle : 840
 '''.strip()
 
 distance_triples = [l for l in distances.split("\n")]
@@ -109,6 +109,9 @@ def solve_z(v1, v2, d):
     x2, y2 = v2
     print("Z1 IS...", z1)
     square_difference = d ** 2 - (x1 - x2) ** 2 - (y1 - y2) ** 2
+    print("X1, Y1", x1, y1)
+    print("X2, Y2", x2, y2)
+    print("Square difference", square_difference)
     z_diff = sqrt(square_difference)
     z2 = z_diff - z1
     return z2
