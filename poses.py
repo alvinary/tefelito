@@ -108,7 +108,8 @@ def solve_z(v1, v2, d):
     x1, y1, z1 = v1
     x2, y2 = v2
     print("Z1 IS...", z1)
-    z_diff = sqrt(d ** 2 - (x1 - x2) ** 2 - (y1 - y2) ** 2)
+    square_difference = d ** 2 - (x1 - x2) ** 2 - (y1 - y2) ** 2
+    z_diff = sqrt(square_difference)
     z2 = z_diff - z1
     return z2
 
