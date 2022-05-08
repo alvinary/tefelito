@@ -4,6 +4,8 @@ import ffmpeg_loader
 
 BONE_THICKNESS = 4
 
+app = ursina.Ursina()
+
 # Pairs of body part names and indices
 parts = '''
 nose : 0
@@ -107,11 +109,7 @@ part_pair_distances = []
 def solve_z(v1, v2, d):
     x1, y1, z1 = v1
     x2, y2 = v2
-    print("Z1 IS...", z1)
     square_difference = d ** 2 - (x1 - x2) ** 2 - (y1 - y2) ** 2
-    print("X1, Y1", x1, y1)
-    print("X2, Y2", x2, y2)
-    print("Square difference", square_difference)
     z_diff = sqrt(square_difference)
     z2 = z_diff - z1
     return z2
@@ -124,6 +122,7 @@ def _sum(v,w):
 
 def ortho(vec, length):
     '''Return a vector orthogonal to v1 with norm 'length' '''
+    vec = list(vec)
     first_component = vec.pop()
     tail_sum = -sum([v_i for v_i in vec])
     _ortho = [tail_sum] + [first_component for v_i in vec]
@@ -148,6 +147,7 @@ class Bone(ursina.Entity):
         self.pose = parentPose
         self.highTip = highIndex
         self.lowTip = lowIndex
+        self.counter = 0
 
     def update_position(self, x1, y1, z1, x2, y2, z2):
         tip = (x2 - x1, y2 - y1, z2 - z1)
@@ -224,6 +224,9 @@ class Pose:
         keypoint_z = {}
         keypoint_z["left shoulder"] = 0
 
+        x1, y1, z1 = pose_2d[5][0], pose_2d[5][1], 0 
+        tridimensional_pose[5] = (x1, y1, z1)
+
         # use that z to find values
         # return a 3d frame
         # (3d frame have 17 3-tuples, one for each keypoint)
@@ -256,4 +259,4 @@ if __name__ == '__main__':
     video_pose = Pose()
     video_pose.frames_from_mp4("./inputs/input.mp4", 0, 12)
     video_pose.to3D()
-    ursina.app.run()
+    app.run()
