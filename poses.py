@@ -2,6 +2,11 @@ from math import sqrt
 import ursina
 import ffmpeg_loader
 
+BONE_THICKNESS = 4
+OPENGL_SCALING = 0.001
+
+app = ursina.Ursina()
+
 # Pairs of body part names and indices
 parts = '''
 nose : 0
@@ -25,18 +30,18 @@ right ankle : 16
 
 # Reference distances between body parts
 distances = '''
-left hip : right hip : 36
-left shoulder : right shoulder : 42
-right shoulder : right elbow : 31
-right elbow : right writs : 28
-right shoulder : right hip : 42
-right hip : right knee : 42
-right knee : right ankle : 42
-left shoulder : left elbow : 31
-left elbow : left writs : 28
-left shoulder : left hip : 42
-left hip : left knee : 42
-left knee : left ankle : 42
+left hip : right hip : 360
+left shoulder : right shoulder : 840
+right shoulder : right elbow : 620
+right elbow : right wrist : 560
+right shoulder : right hip : 840
+right hip : right knee : 840
+right knee : right ankle : 840
+left shoulder : left elbow : 620
+left elbow : left wrist : 560
+left shoulder : left hip : 840
+left hip : left knee : 840
+left knee : left ankle : 840
 '''.strip()
 
 distance_triples = [l for l in distances.split("\n")]
@@ -49,10 +54,10 @@ part_distances = {}
 for p1, p2, d in distance_triples:
     part_distances[p1, p2] = d
 
-# Pairs of connected body parts, sorted so that the first 
-# body part in  every pair has a well-defined coordinate 
+# Pairs of connected body parts, sorted so that the first
+# body part in every pair has a well-defined coordinate 
 # in the z axis, provided one sets an arbitrary z-axis
-# value for the left shoulder to begin with, and assigns 
+# value for the left shoulder to begin with, and assigns
 # a value to the z-axis of the second component of each
 # pair in order using get_z, starting from the first pair
 
@@ -105,49 +110,126 @@ part_pair_distances = []
 def solve_z(v1, v2, d):
     x1, y1, z1 = v1
     x2, y2 = v2
-    z_diff = sqrt(d ** 2 - (x1 - x2) ** 2 - (y1 - y2) ** 2)
-    z2 = z_diff - z1
-    # How about returning just abs?
-    return (z2, -z2)
+    squared_z_difference = d ** 2 - (x1 - x2) ** 2 - (y1 - y2) ** 2
+    z_difference = sqrt(abs(squared_z_difference))
+    z2 = z_difference - z1
+    return z2
 
-def dot(v, w):
+def scalar_product(v, w):
     return sum([v_i * w_i for (v_i, w_i) in zip(v, w)])
+
+def vector_sum(v, w):
+    return tuple([v[i] + w[i] for i, _ in enumerate(zip(v, w))])
 
 def ortho(vec, length):
     '''Return a vector orthogonal to v1 with norm 'length' '''
+    vec = list(vec)
     first_component = vec.pop()
     tail_sum = -sum([v_i for v_i in vec])
     _ortho = [tail_sum] + [first_component for v_i in vec]
-    scalar = length / dot(_ortho, _ortho)
-    _ortho = tuple([scalar * v_i for v_i in vec])
+    scalar = (length / scalar_product(_ortho, _ortho)) ** 1/2
+    _ortho = [scalar * v_i for v_i in _ortho]
     return tuple(_ortho)
 
-class Bone:
-    def __init__(self):
-        verts = [(0, 0, 0), (0, 0, 1),
-                 (0, 0, 1), (1, 0, 0)]
-        tris = [(0, 1, 2), (0, 3, 2), (0, 1, 3), (3, 1, 0)]
-        self.body = ursina.Entity(model=ursina.Mesh(vertices=verts, triangles=tris,
-                           mode='line', thickness=4),
-                           color=ursina.color.cyan, z=-1)
+def ortho_other(vec, length):
+    nonzero_elements = [c for c in vec if c != 0]
+    
+    if len(nonzero_elements) == 0:
+        return (0, 0, 0)
+    
+    if len(nonzero_elements) == 1 and vec[0] != 0:
+        nonzero_component = nonzero_elements.pop()
+        return (0, nonzero_component, 0)
 
-    def update_position(self, _x, _y, _z, _x2, _y2, _z2):
-        verts = []
-        tris = []
-        self.body = ursina.Entity(model=ursina.Mesh(vertices=verts, triangles=tris,
-                           mode='line', thickness=4),
-                           color=ursina.color.cyan, z=-1)
+    if len(nonzero_elements) == 1 and vec[0] == 0:
+        nonzero_component = nonzero_elements.pop()
+        return (nonzero_component, 0, 0)
+
+    if len(nonzero_elements) >= 2:
+        a, b = nonzero_elements[:2]
+        return (-b*(1/(a*b)+1), a, 1/b)
+
+def vector(x, y, z, scaling=1, translation=0):
+    return ursina.Vec3(x * scaling + translation,
+                       y * scaling + translation,
+                       z * scaling + translation)
+
+class Bone(ursina.Entity):
+    def __init__(self, parent_pose, high_index, low_index, **kwargs):
+        verts = [vector(0, 0, 0), vector(0, 0, 1)]
+        tris = [(0, 1, 2), (0, 3, 2), (0, 1, 4), (1, 4, 2)]
+        super().__init__(model=ursina.Mesh(vertices=verts,
+                         mode='line',
+                         thickness=4),
+                         color=ursina.color.cyan,
+                         z=0,
+                         **kwargs)
+        self.pose = parent_pose
+        self.highTip = high_index
+        self.lowTip = low_index
+        self.counter = 0
+        self.scale = ursina.Vec3(4, 4, 4)
+        self.x -= 0.3
+        self.y -= 0.4
+
+    def update_position(self, x1, y1, z1, x2, y2, z2):
+        tip = (x2 - x1, y2 - y1, z2 - z1)
+        
+        _ortho1 = ortho(tip, BONE_THICKNESS)
+        _ortho2 = ortho_other(_ortho1, BONE_THICKNESS)
+        
+        gl_vector = lambda x, y, z: vector(x, y, z,
+                                           scaling=0.001,
+                                           translation=-0.5)
+
+        low_tip = (x1, y1, z1)
+        high_tip = (x2, y2, z2)
+        side_tip = vector_sum(low_tip, _ortho1)
+        interior_tip = vector_sum(low_tip, _ortho2)
+        
+        low_tip = gl_vector(low_tip)
+        high_tip = gl_vector(high_tip)
+        side_tip = gl_vector(side_tip)
+        interior_tip = gl_vector(interior_tip)
+        
+        verts = [low_tip, high_tip, side_tip, interior_tip]
+        
+        tris = [(low_tip, side_tip, interior_tip),
+                (low_tip, side_tip, high_tip),
+                (low_tip, interior_tip, high_tip),
+                (interior_tip, side_tip, high_tip)]
+        
+        self.model = ursina.Mesh(vertices=verts,
+                                 mode='line',
+                                 thickness=4)
+        
+        self.color = ursina.color.cyan
+        self.z = -1
+
+    def update(self):
+        self.counter += ursina.time.dt
+        headBone = self.lowTip == 5 and self.highTip == 6
+
+        if headBone:
+            self.pose.current_frame += 1
+            pose_sequence_size = len(self.pose.frames_3d)
+            self.pose.current_frame %= pose_sequence_size
+
+        if self.counter >= 0.05:
+            self.counter = 0
+            frame_index = self.pose.current_frame
+            x1, y1, z1 = self.pose.frames_3d[frame_index][self.low_tip]
+            x2, y2, z2 = self.pose.frames_3d[frame_index][self.high_tip]
+            self.update_position(x1, y1, z1, x2, y2, z2)
 
 class Pose:
     def __init__(self):
 
-        self.bar_axes = [(5, 6), (11, 12), (5, 7),
-                         (7, 9), (6, 8), (8, 10),
-                         (12, 14), (14, 16), (11, 13),
-                         (13, 15), (5, 11), (6, 12),
-                         (3, 4), (3, 5), (4, 6)]
+        self.bar_axes = [(6, 5), (11, 12), (6, 8), (8, 10),
+                         (11, 13), (13, 15), (12, 14), (14, 16),
+                         (5, 7), (7, 9), (6, 11), (5, 12)]
 
-        self.bones = [Bone() for i in self.bar_axes]
+        self.bones = [Bone(self, i, j) for (i, j) in self.bar_axes]
         
         self.frames = []
         self.frames_3d = []
@@ -159,28 +241,9 @@ class Pose:
         self.shoulder_scale = 1
         self.long_scale = 1
 
-    def update_bones(self, coordinates):
-        
-        for i, pair in enumerate(self.bar_axes):
-        
-            end, end2 = pair
-            
-            x1, y1 = coordinates[end][1], coordinates[end][0]
-            x2, y2 = coordinates[end2][1], coordinates[end2][0]
-            
-            self.bones[i].update_position(x1, y1, x2, y2)
-            
     def frames_from_mp4(self, path, start, end):
         self.frames = ffmpeg_loader.read_video(path, start, end)
         self.frames = list(self.frames)
-
-    def on_key_press(self, symbol, modifiers):
-        self.current_frame += 1
-        self.update_bones(self.frames[self.current_frame])
-
-    def update(self, dt):
-        self.current_frame += 1
-        self.update_bones(self.frames[(self.current_frame + 1) % len(self.frames)])
 
     def to3D(self):
         self.frames_3d = []
@@ -195,6 +258,9 @@ class Pose:
 
         keypoint_z = {}
         keypoint_z["left shoulder"] = 0
+
+        x1, y1, z1 = pose_2d[5][0], pose_2d[5][1], 0
+        tridimensional_pose[5] = (x1, y1, z1)
 
         # use that z to find values
         # return a 3d frame
@@ -223,6 +289,9 @@ class Pose:
     def smooth_3d_frames(self):
         pass
 
+
 if __name__ == '__main__':
     video_pose = Pose()
-    video_pose.frames_from_mp4("./inputs/input.mp4", 0, 120)
+    video_pose.frames_from_mp4("./inputs/input.mp4", 0, 12)
+    video_pose.to3D()
+    app.run()

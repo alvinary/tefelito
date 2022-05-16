@@ -7,26 +7,34 @@
    - poses should be independent of where you get frames from
         [X] Pose.read_from_mp4()
         [] Pose.poses_from_list()
-   - rendering should be on two separate modules (one for 2d with pyglet, the other for 3d with ursina)
-   - there should be a utils module for getting frames from video with ffmpeg
+   - rendering should be on two separate modules (one for 2d with
+     pyglet, the other for 3d with ursina)
+   - there should be a utils module for getting frames from video 
+     with ffmpeg
    - bpy interface module
 
-[] Ursina rendering with [17, 3] tensors (just for testing with mock vectors)
+[] Ursina rendering with [17, 3] tensors (just for 
+   testing with mock vectors)
 [] BPY model manipulaton (again, with mock data)
 [X] ffmpeg util
 [/] Decent pose class
 [X] Decent tflite interface util
 
-[] Make some default skelletons
+[X] Make some default skelletons
 
 => Figure out how to find the five scalars
 => Figure out how to find z axis direction
     [] Greedy
     [] UI
-       [] CLI
        [] GUI
 
 => Validate input paths properly to avoid code injections
     [] Is pathlib.Path.is_file() enough?
 
 [] Docker image
+
+[] Figure out how to adjust bone scale to screen size (this is necessary
+   when using ursina, so it will most likely not be necessary with BPY)
+
+[] Move "tedious" code used to obtain bone indices and map bone tips
+   to and from joint names to constants.py
