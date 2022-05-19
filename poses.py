@@ -1,100 +1,17 @@
 from math import sqrt
+
 import ursina
 import ffmpeg_loader
+
+from constants import part_indices, 
+                      sorted_part_pairs,
+                      index_parts,
+                      distance_triples
 
 BONE_THICKNESS = 4
 OPENGL_SCALING = 0.001
 
 app = ursina.Ursina()
-
-# Pairs of body part names and indices
-parts = '''
-nose : 0
-left eye : 1
-right eye : 2
-left ear : 3
-right ear : 4
-left shoulder : 5
-right shoulder : 6
-left elbow : 7
-right elbow : 8
-left wrist : 9
-right wrist : 10
-left hip : 11
-right hip : 12
-left knee : 13
-right knee : 14
-left ankle : 15
-right ankle : 16
-'''.strip()
-
-# Reference distances between body parts
-distances = '''
-left hip : right hip : 360
-left shoulder : right shoulder : 840
-right shoulder : right elbow : 620
-right elbow : right wrist : 560
-right shoulder : right hip : 840
-right hip : right knee : 840
-right knee : right ankle : 840
-left shoulder : left elbow : 620
-left elbow : left wrist : 560
-left shoulder : left hip : 840
-left hip : left knee : 840
-left knee : left ankle : 840
-'''.strip()
-
-distance_triples = [l for l in distances.split("\n")]
-distance_triples = [l.split(":") for l in distance_triples]
-distance_triples = [[e.strip() for e in l] for l in distance_triples]
-distance_triples = [tuple(l) for l in distance_triples]
-distance_triples = [(p1, p2, int(d)) for p1, p2, d in distance_triples]
-
-part_distances = {}
-for p1, p2, d in distance_triples:
-    part_distances[p1, p2] = d
-
-# Pairs of connected body parts, sorted so that the first 
-# body part in  every pair has a well-defined coordinate 
-# in the z axis, provided one sets an arbitrary z-axis
-# value for the left shoulder to begin with, and assigns 
-# a value to the z-axis of the second component of each
-# pair in order using get_z, starting from the first pair
-
-sorted_part_pairs = '''
-left shoulder, right shoulder
-left shoulder, left hip
-left shoulder, left elbow
-left elbow, left wrist
-left hip, left knee
-left knee, left ankle
-right shoulder, right hip
-right shoulder, right elbow
-right elbow, right wrist
-right hip, right knee
-right knee, right ankle
-left hip, right hip
-'''.strip()
-
-sorted_part_pairs = sorted_part_pairs.split("\n")
-sorted_part_pairs = [l.split(",") for l in sorted_part_pairs]
-sorted_part_pairs = [tuple(p) for p in sorted_part_pairs]
-sorted_part_pairs = [(s1.strip(), s2.strip()) for (s1, s2) in sorted_part_pairs]
-
-# Map body part names to keypoint indices
-part_indices = parts.split("\n")
-part_indices = [tuple(s.split(":")) for s in part_indices]
-part_indices = [(s1.strip(), s2.strip()) for (s1, s2) in part_indices]
-part_indices = [(s1, int(s2)) for (s1, s2) in part_indices]
-part_indices = dict(part_indices)
-
-# Map keypoint indices to body part names
-index_parts = {}
-for k, v in part_indices.items():
-    index_parts[v] = k
-
-sorted_pair_parts = []
-part_pair_distances = []
 
 # parameters:
 #   - scale
@@ -111,7 +28,7 @@ def solve_z(v1, v2, d):
     x1, y1, z1 = v1
     x2, y2 = v2
     square_difference = d ** 2 - (x1 - x2) ** 2 - (y1 - y2) ** 2
-    z_diff = sqrt(square_difference)
+    z_diff = sqrt(abs(square_difference))
     z2 = z_diff - z1
     return z2
 
@@ -141,10 +58,10 @@ def ortho_other(vec, length):
 
 class Bone(ursina.Entity):
     def __init__(self, parentPose, highIndex, lowIndex, **kwargs):
-        verts = [ursina.Vec3(0, 0, 0), ursina.Vec3(0, 0, 1)]
-        tris = [(0, 1, 2), (0, 3, 2), (0, 1, 4), (1, 4, 2)]
+        verts = (ursina.Vec3(1, 0, 0), ursina.Vec3(0, 0, -1), ursina.Vec3(0, 0, 1))
+        tris = (0, 1, 2)
         super().__init__(model=ursina.Mesh(vertices=verts,
-                        mode='line', thickness=4),
+                        mode='line', thickness=1),
                         color=ursina.color.cyan, z=0, **kwargs)
         self.pose = parentPose
         self.highTip = highIndex
@@ -164,11 +81,8 @@ class Bone(ursina.Entity):
         side_tip = ursina.Vec3(side_x, side_y, side_z)
         interior_x, interior_y, interior_z = tuple([c * 0.001 - 0.5 for c in _sum(low_tip, _ortho2)])
         interior_tip = ursina.Vec3(interior_x, interior_y, interior_z)
-        verts = [low_tip, high_tip, side_tip, interior_tip]
-        tris = [(low_tip, side_tip, interior_tip),
-                (low_tip, side_tip, high_tip),
-                (low_tip, interior_tip, high_tip),
-                (interior_tip, side_tip, high_tip)]
+        verts = (low_tip, high_tip, side_tip, interior_tip)
+        tris = (0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3)
         self.model = ursina.Mesh(vertices=verts,
                                  mode='line', thickness=4)
         self.color = ursina.color.cyan
@@ -262,6 +176,6 @@ class Pose:
 
 if __name__ == '__main__':
     video_pose = Pose()
-    video_pose.frames_from_mp4("./inputs/input.mp4", 0, 12)
+    video_pose.frames_from_mp4("./inputs/input.mp4", 0, 120)
     video_pose.to3D()
     app.run()
