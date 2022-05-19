@@ -27,15 +27,15 @@ app = ursina.Ursina()
 def solve_z(v1, v2, d):
     x1, y1, z1 = v1
     x2, y2 = v2
-    square_difference = d ** 2 - (x1 - x2) ** 2 - (y1 - y2) ** 2
-    z_diff = sqrt(abs(square_difference))
-    z2 = z_diff - z1
+    squared_z_difference = d ** 2 - (x1 - x2) ** 2 - (y1 - y2) ** 2
+    z_difference = sqrt(abs(squared_z_difference))
+    z2 = z_difference - z1
     return z2
 
-def dot(v, w):
+def scalar_product(v, w):
     return sum([v_i * w_i for (v_i, w_i) in zip(v, w)])
 
-def _sum(v,w):
+def vector_sum(v, w):
     return tuple([v[i] + w[i] for i, _ in enumerate(zip(v, w))])
 
 def ortho(vec, length):
@@ -44,28 +44,47 @@ def ortho(vec, length):
     first_component = vec.pop()
     tail_sum = -sum([v_i for v_i in vec])
     _ortho = [tail_sum] + [first_component for v_i in vec]
-    scalar = (length / dot(_ortho, _ortho)) ** 1/2
+    scalar = (length / scalar_product(_ortho, _ortho)) ** 1/2
     _ortho = [scalar * v_i for v_i in _ortho]
     return tuple(_ortho)
 
 def ortho_other(vec, length):
     nonzero_elements = [c for c in vec if c != 0]
-    if len(nonzero_elements) < 2:
-        print ("That crazy vector", vec)
+    
+    if len(nonzero_elements) == 0:
         return (0, 0, 0)
-    a, b = nonzero_elements[:2]
-    return (-b*(1/(a*b)+1), a, 1/b)
+    
+    if len(nonzero_elements) == 1 and vec[0] != 0:
+        nonzero_component = nonzero_elements.pop()
+        return (0, nonzero_component, 0)
+
+    if len(nonzero_elements) == 1 and vec[0] == 0:
+        nonzero_component = nonzero_elements.pop()
+        return (nonzero_component, 0, 0)
+
+    if len(nonzero_elements) >= 2:
+        a, b = nonzero_elements[:2]
+        return (-b*(1/(a*b)+1), a, 1/b)
+
+def vector(x, y, z, scaling=1, translation=0):
+    return ursina.Vec3(x * scaling + translation,
+                       y * scaling + translation,
+                       z * scaling + translation)
 
 class Bone(ursina.Entity):
-    def __init__(self, parentPose, highIndex, lowIndex, **kwargs):
-        verts = (ursina.Vec3(1, 0, 0), ursina.Vec3(0, 0, -1), ursina.Vec3(0, 0, 1))
-        tris = (0, 1, 2)
+
+    def __init__(self, parent_pose, high_index, low_index, **kwargs):
+        verts = [vector(0, 0, 0), vector(0, 0, 1)]
+        tris = [(0, 1, 2), (0, 3, 2), (0, 1, 4), (1, 4, 2)]
         super().__init__(model=ursina.Mesh(vertices=verts,
-                        mode='line', thickness=1),
-                        color=ursina.color.cyan, z=0, **kwargs)
-        self.pose = parentPose
-        self.highTip = highIndex
-        self.lowTip = lowIndex
+                         mode='line',
+                         thickness=4),
+                         color=ursina.color.cyan,
+                         z=0,
+                         **kwargs)
+        self.pose = parent_pose
+        self.highTip = high_index
+        self.lowTip = low_index
         self.counter = 0
         self.scale = ursina.Vec3(4, 4, 4)
         self.x -= 0.3
@@ -73,40 +92,59 @@ class Bone(ursina.Entity):
 
     def update_position(self, x1, y1, z1, x2, y2, z2):
         tip = (x2 - x1, y2 - y1, z2 - z1)
+        
         _ortho1 = ortho(tip, BONE_THICKNESS)
         _ortho2 = ortho_other(_ortho1, BONE_THICKNESS)
-        low_tip = ursina.Vec3(x1 * 0.001 - 0.5, y1 * 0.001 - 0.5, z1 * 0.001 - 0.5)
-        high_tip = ursina.Vec3 (x2 * 0.001 - 0.5, y2 * 0.001 - 0.5, z2 * 0.001 - 0.5)
-        side_x, side_y, side_z = tuple([c * 0.001 - 0.5 for c in _sum(low_tip, _ortho1)])
-        side_tip = ursina.Vec3(side_x, side_y, side_z)
-        interior_x, interior_y, interior_z = tuple([c * 0.001 - 0.5 for c in _sum(low_tip, _ortho2)])
-        interior_tip = ursina.Vec3(interior_x, interior_y, interior_z)
-        verts = (low_tip, high_tip, side_tip, interior_tip)
-        tris = (0, 1, 2, 0, 1, 3, 0, 2, 3, 1, 2, 3)
+        
+        gl_vector = lambda x, y, z: vector(x, y, z,
+                                           scaling=0.001,
+                                           translation=-0.5)
+
+        low_tip = (x1, y1, z1)
+        high_tip = (x2, y2, z2)
+        side_tip = vector_sum(low_tip, _ortho1)
+        interior_tip = vector_sum(low_tip, _ortho2)
+        
+        low_tip = gl_vector(low_tip)
+        high_tip = gl_vector(high_tip)
+        side_tip = gl_vector(side_tip)
+        interior_tip = gl_vector(interior_tip)
+        
+        verts = [low_tip, high_tip, side_tip, interior_tip]
+        
+        tris = [(low_tip, side_tip, interior_tip),
+                (low_tip, side_tip, high_tip),
+                (low_tip, interior_tip, high_tip),
+                (interior_tip, side_tip, high_tip)]
+
         self.model = ursina.Mesh(vertices=verts,
-                                 mode='line', thickness=4)
+                                 mode='line',
+                                 thickness=4)
+        
         self.color = ursina.color.cyan
-        self.z=-1
+        self.z = -1
 
     def update(self):
         self.counter += ursina.time.dt
         headBone = self.lowTip == 5 and self.highTip == 6
+
         if headBone:
             self.pose.current_frame += 1
-            poseSequenceSize = len(self.pose.frames_3d)
-            self.pose.current_frame %= poseSequenceSize
+            pose_sequence_size = len(self.pose.frames_3d)
+            self.pose.current_frame %= pose_sequence_size
+
         if self.counter >= 0.05:
             self.counter = 0
-            frameIndex = self.pose.current_frame
-            x1, y1, z1 = self.pose.frames_3d[frameIndex][self.lowTip]
-            x2, y2, z2 = self.pose.frames_3d[frameIndex][self.highTip]
+            frame_index = self.pose.current_frame
+            x1, y1, z1 = self.pose.frames_3d[frame_index][self.low_tip]
+            x2, y2, z2 = self.pose.frames_3d[frame_index][self.high_tip]
             self.update_position(x1, y1, z1, x2, y2, z2)
 
 class Pose:
     def __init__(self):
 
         self.bar_axes = [(6, 5), (11, 12), (6, 8), (8, 10),
-                         (11, 13), (13 , 15), (12, 14), (14,  16),
+                         (11, 13), (13, 15), (12, 14), (14, 16),
                          (5, 7), (7, 9), (6, 11), (5, 12)]
 
         self.bones = [Bone(self, i, j) for (i, j) in self.bar_axes]
@@ -139,7 +177,7 @@ class Pose:
         keypoint_z = {}
         keypoint_z["left shoulder"] = 0
 
-        x1, y1, z1 = pose_2d[5][0], pose_2d[5][1], 0 
+        x1, y1, z1 = pose_2d[5][0], pose_2d[5][1], 0
         tridimensional_pose[5] = (x1, y1, z1)
 
         # use that z to find values
