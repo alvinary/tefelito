@@ -6,7 +6,8 @@ import ffmpeg_loader
 from constants import (part_indices, 
                       sorted_part_pairs,
                       index_parts,
-                      distance_triples)
+                      distance_triples,
+                      part_distances)
 
 BONE_THICKNESS = 4
 OPENGL_SCALING = 0.001
@@ -83,8 +84,8 @@ class Bone(ursina.Entity):
                          z=0,
                          **kwargs)
         self.pose = parent_pose
-        self.highTip = high_index
-        self.lowTip = low_index
+        self.high_tip = high_index
+        self.low_tip = low_index
         self.counter = 0
         self.scale = ursina.Vec3(4, 4, 4)
         self.x -= 0.3

@@ -41,5 +41,5 @@
 
 [] Check if ortho() and ortho_other() behave the intended way
    (e.g. check if they are vectors from the origin and it is
-    ok to scale them add them to low_tip. I think they should
-    be orthogonal to the vector high_tip - low_tip)
+   ok to scale them add them to low_tip. I think they should
+   be orthogonal to the vector high_tip - low_tip)
