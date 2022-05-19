@@ -3,10 +3,10 @@ from math import sqrt
 import ursina
 import ffmpeg_loader
 
-from constants import part_indices, 
+from constants import (part_indices, 
                       sorted_part_pairs,
                       index_parts,
-                      distance_triples
+                      distance_triples)
 
 BONE_THICKNESS = 4
 OPENGL_SCALING = 0.001
@@ -124,10 +124,6 @@ class Pose:
     def frames_from_mp4(self, path, start, end):
         self.frames = ffmpeg_loader.read_video(path, start, end)
         self.frames = list(self.frames)
-
-    def on_key_press(self, symbol, modifiers):
-        self.current_frame += 1
-        self.update_bones(self.frames[self.current_frame])
 
     def to3D(self):
         self.frames_3d = []
