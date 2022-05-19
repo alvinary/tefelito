@@ -84,5 +84,3 @@ index_parts = {}
 for k, v in part_indices.items():
     index_parts[v] = k
 
-sorted_pair_parts = []
-part_pair_distances = []
