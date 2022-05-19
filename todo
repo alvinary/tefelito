@@ -36,5 +36,10 @@
 [] Figure out how to adjust bone scale to screen size (this is necessary
    when using ursina, so it will most likely not be necessary with BPY)
 
-[] Move "tedious" code used to obtain bone indices and map bone tips
-   to and from joint names to constants.py
+[X] Move "tedious" code used to obtain bone indices and map bone tips
+    to and from joint names to constants.py
+
+[] Check if ortho() and ortho_other() behave the intended way
+   (e.g. check if they are vectors from the origin and it is
+    ok to scale them add them to low_tip. I think they should
+    be orthogonal to the vector high_tip - low_tip)
