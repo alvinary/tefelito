@@ -42,4 +42,8 @@
 [] Check if ortho() and ortho_other() behave the intended way
    (e.g. check if they are vectors from the origin and it is
    ok to scale them add them to low_tip. I think they should
-   be orthogonal to the vector high_tip - low_tip)
+   be made orthogonal to the vector high_tip - low_tip, and
+   then scaled and added to low tip - that makes more sense,
+   since it is one thing to be orthogonal to an arm from low tip
+   to high tip and it is another different thing to be orthogonal
+   to low tip)
