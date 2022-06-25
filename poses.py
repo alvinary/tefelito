@@ -21,6 +21,12 @@ app = ursina.Ursina()
 #   - longification
 #   - which neg, which pos
 
+def map_coordinates(x, y, z):
+    small_x = -1.0 + (2.0 * x / SCREEN_WIDTH)
+    small_y = -1.0 + (2.0 * y / SCREEN_HEIGHT)
+    small_z = 0.0 - (z / DEPTH_RATIO)
+    return (small_x, small_y, small_z)
+
 # Given a 3d vector v1 = (x1, y1, z1), a 2d vector v2 = (x2, y2)
 # and a distance d, find a z2 such that the euclidean distance
 # between v1 and (x2, y2, z2) is d.
